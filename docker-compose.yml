@@ -1,0 +1,87 @@
+# Local dev:            docker compose up --build
+# + Ollama (AI):        docker compose --profile ai up --build
+# + n8n (automation):   docker compose --profile automation up -d
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app}"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    ports: ["9000:9000", "9001:9001"]   # 9000 = S3 API (browser uploads), 9001 = console
+    volumes:
+      - minio:/data
+
+  minio-init:                            # creates the private bucket once, then exits
+    image: minio/mc:latest
+    depends_on: [minio]
+    environment:
+      USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      PASS: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      BUCKET: ${S3_BUCKET:-uploads}
+    entrypoint: >
+      /bin/sh -c "until mc alias set local http://minio:9000 $$USER $$PASS; do sleep 1; done;
+      mc mb --ignore-existing local/$$BUCKET; exit 0"
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      PORT: 8000
+    ports: ["8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    environment:
+      API_INTERNAL_URL: http://backend:8000   # server-side admin proxy talks to the API inside the compose network
+    ports: ["3000:3000"]
+    depends_on: [backend]
+
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes:
+      - ollama:/root/.ollama
+    # GPU (NVIDIA) – uncomment if available:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+  n8n:
+    profiles: ["automation"]
+    image: n8nio/n8n:latest
+    ports: ["5678:5678"]
+    environment:
+      GENERIC_TIMEZONE: Asia/Tehran
+    volumes:
+      - n8n:/home/node/.n8n
+      - ./n8n:/workflows:ro        # import /workflows/order-notifications.json from the n8n UI
+
+volumes:
+  minio:
+  pgdata:
+  ollama:
+  n8n:

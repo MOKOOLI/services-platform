@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.venv/
+*.db
+*.sqlite3
+models/
+.DS_Store
+.vercel/
