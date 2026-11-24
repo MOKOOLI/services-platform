@@ -9,3 +9,9 @@ export function apiError(data: unknown, fallback: string): string {
   if (Array.isArray(d)) return d.map((x) => (typeof x === "string" ? x : (x as { msg?: string })?.msg ?? "ورودی نامعتبر")).join(" • ");
   return fallback;
 }
+
+const FA = "۰۱۲۳۴۵۶۷۸۹";
+/** Latin digits (and decimal point) -> Persian digits. */
+export function fa(value: string | number): string {
+  return String(value).replace(/\d/g, (d) => FA[+d]).replace(/\./g, "٫");
+}

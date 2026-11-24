@@ -106,7 +106,13 @@ export default function Files({ title, base, downloadUrl, deleteUrl, kind, canUp
       </ul>
       {canUpload && (
         <>
-          <input ref={input} type="file" disabled={progress !== null} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+          <div className="filepick">
+            <input ref={input} type="file" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+            <button type="button" className="secondary small" disabled={progress !== null} onClick={() => input.current?.click()}>
+              {progress !== null ? `در حال آپلود… ${progress}٪` : "افزودن فایل"}
+            </button>
+            <small>حداکثر {MAX_MB} مگابایت برای هر فایل</small>
+          </div>
           {progress !== null && <div className="bar"><div style={{ width: `${progress}%` }} /></div>}
         </>
       )}

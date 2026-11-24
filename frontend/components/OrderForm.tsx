@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Files from "@/components/Files";
+import { Check } from "@/components/Icons";
 import { API, ProductType } from "@/lib/api";
 
 export default function OrderForm({ type }: { type: ProductType }) {
@@ -11,6 +12,7 @@ export default function OrderForm({ type }: { type: ProductType }) {
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const set = (k: string, v: unknown) => setValues((p) => ({ ...p, [k]: v }));
 
@@ -37,9 +39,18 @@ export default function OrderForm({ type }: { type: ProductType }) {
 
   if (code)
     return (
-      <div className="ok">
-        سفارش ثبت شد. کد پیگیری شما: <code>{code}</code>
-        <p className="muted">این کد را نگه دارید. <Link href={`/track?code=${code}`}>صفحه‌ی پیگیری</Link></p>
+      <div className="success">
+        <span className="success-icon"><Check size={26} /></span>
+        <h2>سفارش شما ثبت شد</h2>
+        <p className="muted">این کد را نگه دارید؛ برای پیگیری سفارش و دریافت فایل‌ها لازم است.</p>
+        <div className="codebox">
+          <code>{code}</code>
+          <button
+            type="button" className="secondary small"
+            onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          >{copied ? "کپی شد" : "کپی کد"}</button>
+        </div>
+        <Link className="btn" href={`/track?code=${code}`}>پیگیری سفارش</Link>
         <Files
           title="پیوست فایل (اختیاری)"
           base={`${API}/api/orders/track/${encodeURIComponent(code)}/files`}
@@ -50,7 +61,7 @@ export default function OrderForm({ type }: { type: ProductType }) {
     );
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} className="sheet">
       <label>نام</label>
       <input required value={name} onChange={(e) => setName(e.target.value)} />
       <label>ایمیل</label>

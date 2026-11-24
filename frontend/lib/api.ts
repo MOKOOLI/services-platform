@@ -19,7 +19,7 @@ export type ProductType = {
 
 export async function getProductTypes(): Promise<ProductType[]> {
   try {
-    const r = await fetch(`${API}/api/product-types`, { cache: "no-store" });
+    const r = await fetch(`${API}/api/product-types`, { cache: "no-store", signal: AbortSignal.timeout(9000) });
     return r.ok ? r.json() : [];
   } catch {
     return [];
@@ -28,7 +28,7 @@ export async function getProductTypes(): Promise<ProductType[]> {
 
 export async function getProductType(slug: string): Promise<ProductType | null> {
   try {
-    const r = await fetch(`${API}/api/product-types/${slug}`, { cache: "no-store" });
+    const r = await fetch(`${API}/api/product-types/${slug}`, { cache: "no-store", signal: AbortSignal.timeout(9000) });
     return r.ok ? r.json() : null;
   } catch {
     return null;

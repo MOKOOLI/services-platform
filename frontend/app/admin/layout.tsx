@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!authed)
     return (
-      <>
+      <div className="admin">
         <h1>ورود مدیر</h1>
         <form onSubmit={login}>
           <label>کلید ادمین</label>
@@ -39,17 +39,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button>ورود</button>
         </form>
         {msg && <div className="err">{msg}</div>}
-      </>
+      </div>
     );
 
   return (
-    <>
+    <div className="admin">
       <div className="tabs">
         <Link href="/admin" style={{ fontWeight: path === "/admin" ? 700 : 400 }}>سفارش‌ها</Link>
         <Link href="/admin/products" style={{ fontWeight: path.startsWith("/admin/products") ? 700 : 400 }}>محصولات</Link>
         <a className="spacer" href="#" onClick={(e) => { e.preventDefault(); logout(); }}>خروج</a>
       </div>
       {children}
-    </>
+    </div>
   );
 }

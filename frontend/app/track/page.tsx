@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Files from "@/components/Files";
 import { API } from "@/lib/api";
-import { apiError, money } from "@/lib/format";
+import { Check } from "@/components/Icons";
+import { apiError, fa, money } from "@/lib/format";
 
 type Tracked = {
   tracking_code: string; status: string; product_name: string;
@@ -13,6 +14,7 @@ type Tracked = {
 const LABELS: Record<string, string> = {
   new: "ثبت شده", in_review: "در حال بررسی", in_progress: "در حال انجام", delivered: "تحویل شده", cancelled: "لغو شده",
 };
+const FLOW = ["new", "in_review", "in_progress", "delivered"];
 
 export default function Track() {
   const [code, setCode] = useState("");
@@ -25,8 +27,8 @@ export default function Track() {
     setErr(""); setRes(null);
     try {
       const r = await fetch(`${API}/api/orders/track/${encodeURIComponent(c.trim())}`, { cache: "no-store" });
-      if (r.ok) setRes(await r.json()); else setErr("سفارشی با این کد پیدا نشد");
-    } catch { setErr("ارتباط با سرور برقرار نشد"); }
+      if (r.ok) setRes(await r.json()); else setErr("سفارشی با این کد پیدا نشد. کد را دوباره بررسی کنید.");
+    } catch { setErr("ارتباط با سرور برقرار نشد. چند ثانیه بعد دوباره امتحان کنید."); }
   }, []);
 
   // Link from email / return from the payment gateway: /track?code=XXXX&paid=1|0
@@ -49,14 +51,19 @@ export default function Track() {
   }
 
   const filesBase = res ? `${API}/api/orders/track/${encodeURIComponent(res.tracking_code)}/files` : "";
+  const idx = res ? FLOW.indexOf(res.status) : -1;
 
   return (
-    <>
+    <div style={{ maxWidth: 720, paddingTop: 28 }}>
       <h1>پیگیری سفارش</h1>
-      <form onSubmit={(e) => { e.preventDefault(); lookup(code); }}>
-        <label>کد پیگیری</label>
-        <input dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} required />
-        <button>جستجو</button>
+      <p className="lead muted">کد پیگیری که هنگام ثبت سفارش گرفتید را وارد کنید.</p>
+
+      <form className="inline-form" onSubmit={(e) => { e.preventDefault(); lookup(code); }}>
+        <div>
+          <label htmlFor="code">کد پیگیری</label>
+          <input id="code" dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} required />
+        </div>
+        <button>نمایش وضعیت</button>
       </form>
 
       {paid === "1" && <div className="ok">پرداخت با موفقیت انجام شد.</div>}
@@ -64,8 +71,23 @@ export default function Track() {
       {err && <div className="err">{err}</div>}
 
       {res && (
-        <div className="ok">
-          {res.product_name} — وضعیت: <strong>{LABELS[res.status] ?? res.status}</strong>
+        <section className="sheet">
+          <h2>{res.product_name}</h2>
+          {res.status === "cancelled" ? (
+            <p style={{ marginTop: 10 }}><span className="badge warn" style={{ marginInlineStart: 0 }}>لغو شده</span></p>
+          ) : (
+            <ol className="stepper" aria-label="مراحل سفارش">
+              {FLOW.map((k, i) => {
+                const state = i < idx ? "done" : i === idx ? "current" : "";
+                return (
+                  <li key={k} className={state} aria-current={i === idx ? "step" : undefined}>
+                    <span className="node">{i < idx ? <Check size={14} /> : fa(i + 1)}</span>
+                    <span className="label">{LABELS[k]}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
           {res.payment_status !== "none" && (
             <p>
@@ -76,7 +98,7 @@ export default function Track() {
             </p>
           )}
           {res.payment_status === "unpaid" && res.payment_enabled && (
-            <button onClick={pay} disabled={busy} style={{ marginTop: 0 }}>{busy ? "در حال انتقال به درگاه…" : "پرداخت آنلاین"}</button>
+            <button onClick={pay} disabled={busy}>{busy ? "در حال انتقال به درگاه…" : "پرداخت آنلاین"}</button>
           )}
           {res.payment_status === "unpaid" && !res.payment_enabled && (
             <p className="muted">برای پرداخت با ما در تماس باشید؛ پس از تایید پرداخت، فایل‌های تحویلی باز می‌شوند.</p>
@@ -89,8 +111,8 @@ export default function Track() {
             kind="attachment"
             canUpload={res.status !== "delivered" && res.status !== "cancelled"}
           />
-        </div>
+        </section>
       )}
-    </>
+    </div>
   );
 }
