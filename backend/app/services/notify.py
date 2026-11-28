@@ -66,7 +66,7 @@ async def post_webhook(event: str, payload: dict[str, Any]) -> bool:
     headers = {"X-Webhook-Secret": settings.n8n_webhook_secret} if settings.n8n_webhook_secret else {}
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.post(settings.n8n_webhook_url, headers=headers, json={"event": event, "order": payload})
+            r = await client.post(settings.n8n_webhook_url, headers=headers, json={"event": event, "order" if event.startswith("order.") else "data": payload})
         if r.status_code >= 400:
             log.warning("n8n webhook error %s", r.status_code)
             return False
@@ -131,3 +131,15 @@ async def order_paid(data: dict[str, Any]) -> None:
     )
     await send_email(data["customer_email"], "پرداخت شما ثبت شد", html)
     await post_webhook("order.paid", data)
+
+
+async def contact_created(data: dict[str, Any]) -> None:
+    if settings.admin_email:
+        html = _email_shell(
+            f"<p>پیام جدید از فرم تماس:</p>"
+            f"<p><strong>{escape(data['name'])}</strong> (<span dir=\"ltr\">{escape(data['email'])}</span>)</p>"
+            f"<p>موضوع: {escape(data['subject'] or '—')}</p>"
+            f"<p style=\"white-space:pre-wrap\">{escape(data['message'])}</p>"
+        )
+        await send_email(settings.admin_email, "پیام جدید از فرم تماس", html)
+    await post_webhook("contact.created", data)

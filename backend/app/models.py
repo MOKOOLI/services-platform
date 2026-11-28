@@ -112,3 +112,15 @@ class OrderFile(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     order: Mapped[Order] = relationship(back_populates="files")
+
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    email: Mapped[str] = mapped_column(String(254))
+    subject: Mapped[str] = mapped_column(String(160), default="")
+    message: Mapped[str] = mapped_column(Text)
+    handled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

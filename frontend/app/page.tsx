@@ -1,118 +1,178 @@
-"use client";
-import { useCallback, useEffect, useState } from "react";
-import Files from "@/components/Files";
-import { API } from "@/lib/api";
-import { Check } from "@/components/Icons";
-import { apiError, fa, money } from "@/lib/format";
+import Link from "next/link";
+import Faq from "@/components/Faq";
+import HeroPlot from "@/components/HeroPlot";
+import { Book, Compass, ICONS } from "@/components/Icons";
+import { AcademicArt, TechArt } from "@/components/ServiceArt";
+import { AnovaTable } from "@/components/SampleTables";
+import TrackBox from "@/components/TrackBox";
+import { getProductTypes, ProductType } from "@/lib/api";
+import { AUDIENCES, FAQ, FEATURES, GUIDES, STEPS } from "@/lib/content";
 
-type Tracked = {
-  tracking_code: string; status: string; product_name: string;
-  price_amount: number | null; price_currency: string;
-  payment_status: "none" | "unpaid" | "paid"; payment_enabled: boolean;
-};
+export const dynamic = "force-dynamic";
 
-const LABELS: Record<string, string> = {
-  new: "ثبت شده", in_review: "در حال بررسی", in_progress: "در حال انجام", delivered: "تحویل شده", cancelled: "لغو شده",
-};
-const FLOW = ["new", "in_review", "in_progress", "delivered"];
+const CATEGORY = { academic: "آکادمیک", technical: "فنی" } as const;
 
-export default function Track() {
-  const [code, setCode] = useState("");
-  const [res, setRes] = useState<Tracked | null>(null);
-  const [err, setErr] = useState("");
-  const [paid, setPaid] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+function choices(t: ProductType) {
+  const f = t.schema_json.fields.find((x) => x.type === "select" && x.options?.length);
+  return f ? { label: f.label, options: f.options ?? [] } : null;
+}
 
-  const lookup = useCallback(async (c: string) => {
-    setErr(""); setRes(null);
-    try {
-      const r = await fetch(`${API}/api/orders/track/${encodeURIComponent(c.trim())}`, { cache: "no-store" });
-      if (r.ok) setRes(await r.json()); else setErr("سفارشی با این کد پیدا نشد. کد را دوباره بررسی کنید.");
-    } catch { setErr("ارتباط با سرور برقرار نشد. چند ثانیه بعد دوباره امتحان کنید."); }
-  }, []);
-
-  // Link from email / return from the payment gateway: /track?code=XXXX&paid=1|0
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    setPaid(q.get("paid"));
-    const c = q.get("code");
-    if (c) { setCode(c); lookup(c); }
-  }, [lookup]);
-
-  async function pay() {
-    if (!res) return;
-    setBusy(true); setErr("");
-    try {
-      const r = await fetch(`${API}/api/orders/track/${encodeURIComponent(res.tracking_code)}/pay`, { method: "POST" });
-      const d = await r.json().catch(() => null);
-      if (!r.ok) { setErr(apiError(d, "شروع پرداخت ناموفق بود")); return; }
-      window.location.href = d.redirect_url;
-    } catch { setErr("ارتباط با سرور برقرار نشد"); } finally { setBusy(false); }
-  }
-
-  const filesBase = res ? `${API}/api/orders/track/${encodeURIComponent(res.tracking_code)}/files` : "";
-  const idx = res ? FLOW.indexOf(res.status) : -1;
-
+export default async function Home() {
+  const types = await getProductTypes();
   return (
-    <div style={{ maxWidth: 720, paddingTop: 28 }}>
-      <h1>پیگیری سفارش</h1>
-      <p className="lead muted">کد پیگیری که هنگام ثبت سفارش گرفتید را وارد کنید.</p>
-
-      <form className="inline-form" onSubmit={(e) => { e.preventDefault(); lookup(code); }}>
-        <div>
-          <label htmlFor="code">کد پیگیری</label>
-          <input id="code" dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} required />
+    <>
+      <section className="hero">
+        <div className="hero-copy">
+          <h1>تحلیل آماری و پروژه‌های داده، با پیگیری شفاف از ثبت تا تحویل</h1>
+          <p className="lead">
+            سفارش را ثبت کنید، هزینه را بعد از بررسی می‌گیرید و با یک کد پیگیری مراحل کار را می‌بینید.
+            برای سفارش نیازی به ثبت‌نام نیست.
+          </p>
+          <div className="cta-row">
+            <Link className="btn warm" href="/services">انتخاب خدمت</Link>
+            <Link className="btn outline-light" href="/tools/test-selector">کدام آزمون آماری؟</Link>
+          </div>
+          <TrackBox light />
         </div>
-        <button>نمایش وضعیت</button>
-      </form>
+        <HeroPlot />
+      </section>
 
-      {paid === "1" && <div className="ok">پرداخت با موفقیت انجام شد.</div>}
-      {paid === "0" && <div className="err">پرداخت انجام نشد یا لغو شد. می‌توانید دوباره تلاش کنید.</div>}
-      {err && <div className="err">{err}</div>}
+      <section id="services" className="section">
+        <div className="section-head row-between">
+          <div>
+            <h2>خدمت مورد نظرتان را انتخاب کنید</h2>
+            <p className="muted">هر خدمت یک فرم ساده دارد؛ هزینه بعد از بررسی سفارش اعلام می‌شود.</p>
+          </div>
+          <Link href="/services" className="more">مشاهده‌ی همه و جست‌وجو</Link>
+        </div>
+        {types.length === 0 ? (
+          <div className="notice">
+            خدمت‌ها بارگذاری نشد. اگر سایت تازه باز شده، چند ثانیه صبر کنید و صفحه را دوباره باز کنید.
+          </div>
+        ) : (
+          <ul className="svc-list">
+            {types.map((t) => {
+              const c = choices(t);
+              return (
+                <li key={t.slug} className={`svc ${t.category}`}>
+                  <div className="svc-body">
+                    <span className="cat"><i className={`dot ${t.category}`} />{CATEGORY[t.category]}</span>
+                    <h3><Link href={`/services/${t.slug}`}>{t.name}</Link></h3>
+                    <p>{t.description}</p>
+                    {c && (
+                      <div className="chips" aria-label={c.label}>
+                        <span className="muted">{c.label}:</span>
+                        {c.options.map((o) => <span key={o} className="chip">{o}</span>)}
+                      </div>
+                    )}
+                    <div className="svc-actions">
+                      <Link className="btn" href={`/order/${t.slug}`}>ثبت سفارش</Link>
+                      <Link className="btn ghost" href={`/services/${t.slug}`}>جزئیات</Link>
+                    </div>
+                  </div>
+                  <div className="svc-art">{t.category === "academic" ? <AcademicArt /> : <TechArt />}</div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
-      {res && (
-        <section className="sheet">
-          <h2>{res.product_name}</h2>
-          {res.status === "cancelled" ? (
-            <p style={{ marginTop: 10 }}><span className="badge warn" style={{ marginInlineStart: 0 }}>لغو شده</span></p>
-          ) : (
-            <ol className="stepper" aria-label="مراحل سفارش">
-              {FLOW.map((k, i) => {
-                const state = i < idx ? "done" : i === idx ? "current" : "";
-                return (
-                  <li key={k} className={state} aria-current={i === idx ? "step" : undefined}>
-                    <span className="node">{i < idx ? <Check size={14} /> : fa(i + 1)}</span>
-                    <span className="label">{LABELS[k]}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
+      <section className="section">
+        <div className="section-head"><h2>برای چه کسانی؟</h2></div>
+        <div className="audience">
+          {AUDIENCES.map((a) => (
+            <div key={a.title}><h3>{a.title}</h3><p>{a.text}</p></div>
+          ))}
+        </div>
+      </section>
 
-          {res.payment_status !== "none" && (
-            <p>
-              هزینه: <strong>{money(res.price_amount, res.price_currency)}</strong>
-              {res.payment_status === "paid"
-                ? <span className="badge ok">پرداخت شده</span>
-                : <span className="badge warn">پرداخت‌نشده</span>}
-            </p>
-          )}
-          {res.payment_status === "unpaid" && res.payment_enabled && (
-            <button onClick={pay} disabled={busy}>{busy ? "در حال انتقال به درگاه…" : "پرداخت آنلاین"}</button>
-          )}
-          {res.payment_status === "unpaid" && !res.payment_enabled && (
-            <p className="muted">برای پرداخت با ما در تماس باشید؛ پس از تایید پرداخت، فایل‌های تحویلی باز می‌شوند.</p>
-          )}
+      <section className="section">
+        <div className="section-head"><h2>چرا {`افرا دانش سبز`}؟</h2></div>
+        <div className="features">
+          {FEATURES.map((f) => {
+            const Icon = ICONS[f.icon as keyof typeof ICONS];
+            return (
+              <div key={f.title} className="feature">
+                <span className="ico"><Icon /></span>
+                <h3>{f.title}</h3>
+                <p>{f.text}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
-          <Files
-            title="فایل‌ها"
-            base={filesBase}
-            downloadUrl={(id) => `${filesBase}/${id}/download`}
-            kind="attachment"
-            canUpload={res.status !== "delivered" && res.status !== "cancelled"}
-          />
-        </section>
-      )}
-    </div>
+      <section className="section">
+        <div className="section-head row-between">
+          <h2>مسیر یک سفارش</h2>
+          <Link href="/how-it-works" className="more">جزئیات بیشتر</Link>
+        </div>
+        <ol className="steps">
+          {STEPS.map((s) => <li key={s.title}><h3>{s.title}</h3><p>{s.text}</p></li>)}
+        </ol>
+      </section>
+
+      <section className="section tool-teaser">
+        <div>
+          <span className="ico"><Compass /></span>
+          <h2>نمی‌دانید کدام آزمون آماری مناسب است؟</h2>
+          <p>با چند سؤال کوتاه درباره‌ی هدف تحلیل و نوع داده‌هایتان، آزمون مناسب و پیش‌فرض‌هایش را ببینید.</p>
+          <Link className="btn" href="/tools/test-selector">شروع ابزار انتخاب آزمون</Link>
+        </div>
+        <ul className="tool-preview" aria-hidden="true">
+          <li>مقایسه‌ی گروه‌ها</li><li>رابطه‌ی دو متغیر</li><li>پیش‌بینی</li>
+        </ul>
+      </section>
+
+      <section className="section sample">
+        <div className="sample-copy">
+          <h2>خروجی‌ها آماده‌ی استفاده در گزارش‌اند</h2>
+          <p>
+            نتایج در قالب جدول‌ها و نمودارهای استاندارد تحویل داده می‌شوند تا بتوانید مستقیم در پایان‌نامه،
+            مقاله یا گزارش‌تان از آن‌ها استفاده کنید.
+          </p>
+          <p className="muted small">داده‌های جدول نمونه فقط برای نمایش قالب است.</p>
+          <Link href="/samples" className="more">مشاهده‌ی نمونه‌های بیشتر</Link>
+        </div>
+        <AnovaTable />
+      </section>
+
+      <section className="section">
+        <div className="section-head row-between">
+          <h2>راهنماهای کاربردی</h2>
+          <Link href="/guides" className="more">همه‌ی راهنماها</Link>
+        </div>
+        <div className="guide-cards">
+          {GUIDES.map((g) => (
+            <Link key={g.slug} href={`/guides/${g.slug}`} className="guide-card">
+              <span className="chip"><Book size={14} /> {g.tag}</span>
+              <h3>{g.title}</h3>
+              <p>{g.summary}</p>
+              <small>مطالعه‌ی {g.minutes.toLocaleString("fa-IR")} دقیقه‌ای</small>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head row-between">
+          <h2>سوالات متداول</h2>
+          <Link href="/faq" className="more">همه‌ی سوالات</Link>
+        </div>
+        <Faq items={[FAQ[0], FAQ[4], FAQ[5], FAQ[6], FAQ[8]]} searchable={false} />
+      </section>
+
+      <section className="cta-band">
+        <div>
+          <h2>آماده‌اید؟ سفارش‌تان را همین حالا ثبت کنید</h2>
+          <p>چند دقیقه برای پر کردن فرم کافی است؛ بقیه‌ی مسیر را با کد پیگیری دنبال می‌کنید.</p>
+        </div>
+        <div className="cta-row" style={{ marginTop: 0 }}>
+          <Link className="btn warm" href="/services">انتخاب خدمت</Link>
+          <Link className="btn outline-light" href="/contact">سؤال دارم</Link>
+        </div>
+      </section>
+    </>
   );
 }

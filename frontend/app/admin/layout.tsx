@@ -47,6 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="tabs">
         <Link href="/admin" style={{ fontWeight: path === "/admin" ? 700 : 400 }}>سفارش‌ها</Link>
         <Link href="/admin/products" style={{ fontWeight: path.startsWith("/admin/products") ? 700 : 400 }}>محصولات</Link>
+        <Link href="/admin/messages" style={{ fontWeight: path.startsWith("/admin/messages") ? 700 : 400 }}>پیام‌ها</Link>
         <a className="spacer" href="#" onClick={(e) => { e.preventDefault(); logout(); }}>خروج</a>
       </div>
       {children}

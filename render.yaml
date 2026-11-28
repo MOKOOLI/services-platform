@@ -43,6 +43,8 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false        # receives contact-form messages (needs RESEND_API_KEY); optional
       - key: PUBLIC_SITE_URL
         sync: false       # https://yourdomain.com (used in email links)
       - key: RESEND_API_KEY

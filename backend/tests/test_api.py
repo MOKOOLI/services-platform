@@ -9,6 +9,9 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app import models, seed  # noqa: E402,F401
+from app.config import settings as _settings  # noqa: E402
+
+_settings.rate_limit_orders_per_hour = 10_000  # suites create many orders from one test IP
 from app.db import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 

@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import SessionLocal, get_db
-from ..models import ORDER_STATUSES, Order, OrderFile, Payment, ProductType, payment_status
+from ..models import ORDER_STATUSES, ContactMessage, Order, OrderFile, Payment, ProductType, payment_status
 from ..schemas import (
-    DownloadOut, FileCreateIn, FileOut, FileUploadOut, OrderAdminOut, PriceIn,
+    ContactAdminOut, DownloadOut, FileCreateIn, HandledIn, FileOut, FileUploadOut, OrderAdminOut, PriceIn,
     ProductTypeAdminOut, ProductTypeIn, ProductTypeOut, StatusIn,
 )
 from ..services import notify, ollama, storage
@@ -110,6 +110,22 @@ def mark_paid(order_id: int, background: BackgroundTasks, db: Session = Depends(
     db.commit()
     background.add_task(notify.order_paid, _payload(o))
     return _out(o)
+
+
+# ---------------- contact messages ----------------
+@router.get("/messages", response_model=list[ContactAdminOut])
+def list_messages(db: Session = Depends(get_db)):
+    return db.scalars(select(ContactMessage).order_by(ContactMessage.id.desc()).limit(200)).all()
+
+
+@router.patch("/messages/{message_id}", response_model=ContactAdminOut)
+def set_message_handled(message_id: int, body: HandledIn, db: Session = Depends(get_db)):
+    m = db.get(ContactMessage, message_id)
+    if not m:
+        raise HTTPException(404, "پیام پیدا نشد")
+    m.handled = body.handled
+    db.commit()
+    return m
 
 
 # ---------------- product types ----------------

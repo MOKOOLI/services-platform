@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     max_upload_mb: int = 25
     max_files_per_order: int = 20
 
+    admin_email: str = ""                 # receives contact-form messages (needs RESEND_API_KEY)
+    rate_limit_orders_per_hour: int = 20  # per client IP
+    rate_limit_contact_per_hour: int = 5  # per client IP
+
     # Notifications
     public_site_url: str = "http://localhost:3000"
     resend_api_key: str = ""

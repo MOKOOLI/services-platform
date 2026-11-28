@@ -105,3 +105,26 @@ class OrderAdminOut(BaseModel):
 
 class StatusIn(BaseModel):
     status: str
+
+
+class ContactIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    subject: str = Field(default="", max_length=160)
+    message: str = Field(min_length=10, max_length=3000)
+    website: str = ""  # honeypot: real users never fill this
+
+
+class ContactAdminOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
+    subject: str
+    message: str
+    handled: bool
+    created_at: datetime
+
+
+class HandledIn(BaseModel):
+    handled: bool
